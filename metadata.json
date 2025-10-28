@@ -1,0 +1,5 @@
+{
+  "name": "Stories from Songs",
+  "description": "Generate comprehensive storyboards and visual treatments for music videos using the Gemini API.",
+  "requestFramePermissions": []
+}
