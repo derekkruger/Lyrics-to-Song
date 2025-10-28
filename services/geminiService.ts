@@ -2,14 +2,9 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { SongDetails, VideoGenerationConfig } from '../types';
 
-declare global {
-  interface Window {
-    // Fix: Using the globally expected type 'AIStudio' for window.aistudio to resolve conflicts.
-    // The error message "Property 'aistudio' must be of type 'AIStudio'" suggests that 'AIStudio'
-    // is already a known type in the environment's global declarations.
-    aistudio: AIStudio; 
-  }
-}
+// Remove the global declaration for `window.aistudio`.
+// The environment (e.g., AI Studio) is expected to provide this type definition globally.
+// Attempting to redefine it locally causes a "All declarations of 'aistudio' must have identical modifiers" error.
 
 /**
  * Initializes the GoogleGenAI client.
@@ -63,6 +58,8 @@ Do not generate lyrics, only find existing ones. Provide the exact lyrics.
     console.error("Error looking up lyrics:", error);
     if (error instanceof Error && error.message.includes("Requested entity was not found.")) {
       throw new Error(`Error: API key might be invalid or there was an API issue during lyric lookup. Please ensure your API key is correct and try again. Original error: ${error.message}`);
+    } else if (error instanceof Error && error.message.includes("The model is overloaded.")) {
+      throw new Error(`The AI model is currently overloaded for lyric lookup. Please wait a moment and try again.`);
     }
     throw new Error(`Failed to look up lyrics: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -164,6 +161,8 @@ Generate the complete list of all scenes required for the 2-minute video.
     console.error("Error generating storyboard:", error);
     if (error instanceof Error && error.message.includes("Requested entity was not found.")) {
       throw new Error(`Error: API key might be invalid or there was an API issue during storyboard generation. Please ensure your API key is correct and try again. Original error: ${error.message}`);
+    } else if (error instanceof Error && error.message.includes("The model is overloaded.")) {
+      throw new Error(`The AI model is currently overloaded for storyboard generation. Please wait a moment and try generating the storyboard again.`);
     }
     throw new Error(`Failed to generate storyboard: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -226,8 +225,9 @@ export async function generateVideo(prompt: string, config: VideoGenerationConfi
     // Specifically handle "Requested entity was not found." for API key re-selection
     if (error instanceof Error && error.message.includes("Requested entity was not found.")) {
       throw new Error("API Key might be invalid or has expired. Please try selecting your API key again. (Billing info: ai.google.dev/gemini-api/docs/billing)");
+    } else if (error instanceof Error && error.message.includes("The model is overloaded.")) {
+      throw new Error(`The AI model is currently overloaded for video generation. Please wait a moment and try again.`);
     }
     throw new Error(`Failed to generate video: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
-    
