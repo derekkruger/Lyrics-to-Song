@@ -1,22 +1,21 @@
 
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { SongDetails, VideoGenerationConfig } from './types';
 import SongInputForm from './components/SongInputForm';
 import StoryboardDisplay from './components/StoryboardDisplay';
-import { generateStoryboard, lookupLyrics, generateVideo } from './services/geminiService'; // Changed generateLyrics to lookupLyrics
+import { generateStoryboard, lookupLyrics, generateVideo } from './services/geminiService';
 
 function App() {
   const [songDetails, setSongDetails] = useState<SongDetails>({
     title: '',
     artist: '',
     lyrics: '',
-    lyricsSourceUrls: null, // Initialize lyricsSourceUrls
+    lyricsSourceUrls: null,
   });
   const [storyboard, setStoryboard] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false); // For storyboard generation
-  const [isLookingUpLyrics, setIsLookingUpLyrics] = useState<boolean>(false); // Renamed from isGeneratingLyrics
-  const [error, setError] = useState<string | null>(null); // For general errors (lyrics, storyboard)
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLookingUpLyrics, setIsLookingUpLyrics] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Video generation states
   const [overallVideoPrompt, setOverallVideoPrompt] = useState<string>('');
@@ -29,17 +28,17 @@ function App() {
   const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
   const [customVideoError, setCustomVideoError] = useState<string | null>(null);
 
-  const [videoAspectRatio, setVideoAspectRatio] = useState<'16:9' | '9:16'>('16:9'); // Default aspect ratio
+  const [videoAspectRatio, setVideoAspectRatio] = useState<'16:9' | '9:16'>('16:9');
 
   const handleSongDetailsChange = useCallback((details: SongDetails) => {
     setSongDetails(details);
   }, []);
 
-  const handleLookupLyrics = useCallback(async () => { // Renamed handler
-    setIsLookingUpLyrics(true); // Updated state setter
-    setError(null); // Clear any previous errors
-    setStoryboard(''); // Clear any previous storyboard
-    setOverallVideoUrl(null); // Clear video states
+  const handleLookupLyrics = useCallback(async () => {
+    setIsLookingUpLyrics(true);
+    setError(null);
+    setStoryboard('');
+    setOverallVideoUrl(null);
     setOverallVideoError(null);
     setCustomVideoUrl(null);
     setCustomVideoError(null);
@@ -47,21 +46,21 @@ function App() {
       if (!songDetails.title.trim() || !songDetails.artist.trim()) {
         throw new Error("Please provide both song title and artist to look up lyrics.");
       }
-      const { lyrics, sourceUrls } = await lookupLyrics(songDetails.title, songDetails.artist); // Call renamed service function
+      const { lyrics, sourceUrls } = await lookupLyrics(songDetails.title, songDetails.artist);
       setSongDetails(prevDetails => ({ ...prevDetails, lyrics: lyrics, lyricsSourceUrls: sourceUrls }));
     } catch (err) {
       console.error('Failed to look up lyrics:', err);
       setError(`Failed to look up lyrics. Please try again. ${err instanceof Error ? err.message : String(err)}`);
-      setSongDetails(prevDetails => ({ ...prevDetails, lyrics: '', lyricsSourceUrls: null })); // Clear lyrics and sources on error
+      setSongDetails(prevDetails => ({ ...prevDetails, lyrics: '', lyricsSourceUrls: null }));
     } finally {
-      setIsLookingUpLyrics(false); // Updated state setter
+      setIsLookingUpLyrics(false);
     }
-  }, [songDetails.title, songDetails.artist]); // Depend on title and artist for lyric lookup
+  }, [songDetails.title, songDetails.artist]);
 
   const handleGenerateStoryboard = useCallback(async () => {
     setIsLoading(true);
-    setError(null); // Clear any previous errors
-    setOverallVideoUrl(null); // Clear video states
+    setError(null);
+    setOverallVideoUrl(null);
     setOverallVideoError(null);
     setCustomVideoUrl(null);
     setCustomVideoError(null);
@@ -77,12 +76,10 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [songDetails]); // Ensure `songDetails` is in the dependency array.
+  }, [songDetails]);
 
-  // Effect to parse storyboard for video prompts
   useEffect(() => {
     if (storyboard) {
-      // Parse Core Theme(s) for overall video prompt
       const coreThemeMatch = storyboard.match(/Core Theme\(s\):\s*\(([^)]+)\)/);
       if (coreThemeMatch && coreThemeMatch[1]) {
         setOverallVideoPrompt(`Create a music video reflecting the themes: ${coreThemeMatch[1]}.`);
@@ -90,18 +87,15 @@ function App() {
         setOverallVideoPrompt('Create an animated music video based on the provided storyboard themes.');
       }
 
-      // Parse Visual Direction for Scene 1 for custom video prompt default
       const scene1VisualDirectionMatch = storyboard.match(/\*\*Scene 1\*\*[\s\S]*?\*\*Visual Direction \(Remington Style\):\s*([^]+?)(?=(?:\s*\*\*\s*Scene \d+\s*\*\*|\s*---|$))/);
       if (scene1VisualDirectionMatch && scene1VisualDirectionMatch[1]) {
         let vd = scene1VisualDirectionMatch[1].trim();
-        // Clean up potential trailing list items or extra newlines from the regex match
         vd = vd.split('\n').filter(line => !line.startsWith('* ')).join('\n').trim();
         setCustomVideoPrompt(vd);
       } else {
         setCustomVideoPrompt('Enter a visual direction from a scene to generate its video.');
       }
     } else {
-      // Clear prompts if storyboard is cleared
       setOverallVideoPrompt('');
       setCustomVideoPrompt('');
     }
@@ -125,7 +119,6 @@ function App() {
     } catch (err) {
       console.error('Failed to generate overall video:', err);
       setOverallVideoError(`Failed to generate video: ${err instanceof Error ? err.message : String(err)}. Please try again.`);
-      // If API key error, try to reopen the key selection dialog.
       if (err instanceof Error && err.message.includes("API Key might be invalid")) {
         console.warn("Attempting to re-open API key selection due to reported invalid key.");
         await window.aistudio.openSelectKey();
@@ -145,7 +138,6 @@ function App() {
     } catch (err) {
       console.error('Failed to generate custom video:', err);
       setCustomVideoError(`Failed to generate video: ${err instanceof Error ? err.message : String(err)}. Please try again.`);
-      // If API key error, try to reopen the key selection dialog.
       if (err instanceof Error && err.message.includes("API Key might be invalid")) {
         console.warn("Attempting to re-open API key selection due to reported invalid key.");
         await window.aistudio.openSelectKey();
@@ -155,51 +147,62 @@ function App() {
     }
   }, []);
 
+  const handleReset = () => {
+    setStoryboard('');
+    setSongDetails({ title: '', artist: '', lyrics: '', lyricsSourceUrls: null });
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 bg-gray-900 font-sans">
-      <header className="w-full max-w-4xl text-center py-8">
-        <h1 className="text-5xl font-extrabold text-white drop-shadow-lg">
-          Gemini Music Video Storyteller
-        </h1>
-        <p className="text-lg text-gray-400 mt-3">
-          Craft detailed visual treatments for your songs with AI.
-        </p>
-      </header>
-
-      <main className="w-full max-w-4xl flex-grow">
-        <SongInputForm
-          songDetails={songDetails}
-          onSongDetailsChange={handleSongDetailsChange}
-          onSubmit={handleGenerateStoryboard}
-          isLoading={isLoading}
-          isLookingUpLyrics={isLookingUpLyrics} // Updated prop name
-          onLookupLyrics={handleLookupLyrics} // Updated prop name
-        />
-
-        {error && (
-          <div className="mt-8 p-4 bg-red-600 text-white rounded-lg max-w-2xl mx-auto text-center">
-            <p className="font-bold">Error:</p>
-            <p>{error}</p>
+    <div className="min-h-screen flex flex-col justify-center items-center p-4 md:p-8 relative">
+      <main className="w-full max-w-6xl z-10">
+        {!storyboard ? (
+           <div className="animate-fade-in">
+              <SongInputForm
+                songDetails={songDetails}
+                onSongDetailsChange={handleSongDetailsChange}
+                onSubmit={handleGenerateStoryboard}
+                isLoading={isLoading}
+                isLookingUpLyrics={isLookingUpLyrics}
+                onLookupLyrics={handleLookupLyrics}
+              />
+              
+              {error && (
+                <div className="mt-8 p-4 bg-red-500/80 backdrop-blur-sm text-white rounded-lg max-w-md mx-auto text-center shadow-lg">
+                  <p>{error}</p>
+                </div>
+              )}
+           </div>
+        ) : (
+          <div className="relative animate-fade-in">
+             <div className="absolute top-0 right-0 -mt-12 md:-mr-4 z-50">
+               <button 
+                 onClick={handleReset}
+                 className="text-white/60 hover:text-white text-sm bg-black/30 hover:bg-black/50 px-4 py-2 rounded-full backdrop-blur transition-all"
+               >
+                 Start New Story
+               </button>
+             </div>
+             
+             {/* Add a semi-transparent background wrapper for readability if needed, but StoryboardDisplay has its own styling. 
+                 We will let StoryboardDisplay handle its card look. */}
+             <StoryboardDisplay
+                storyboard={storyboard}
+                overallVideoPrompt={overallVideoPrompt}
+                onGenerateOverallVideo={handleGenerateOverallVideo}
+                isGeneratingOverallVideo={isGeneratingOverallVideo}
+                overallVideoUrl={overallVideoUrl}
+                overallVideoError={overallVideoError}
+                customVideoPrompt={customVideoPrompt}
+                onCustomVideoPromptChange={handleCustomVideoPromptChange}
+                onGenerateCustomVideo={handleGenerateCustomVideo}
+                isGeneratingCustomVideo={isGeneratingCustomVideo}
+                customVideoUrl={customVideoUrl}
+                customVideoError={customVideoError}
+                videoAspectRatio={videoAspectRatio}
+                onVideoAspectRatioChange={handleVideoAspectRatioChange}
+              />
           </div>
         )}
-
-        <StoryboardDisplay
-          storyboard={storyboard}
-          overallVideoPrompt={overallVideoPrompt}
-          onGenerateOverallVideo={handleGenerateOverallVideo}
-          isGeneratingOverallVideo={isGeneratingOverallVideo}
-          overallVideoUrl={overallVideoUrl}
-          overallVideoError={overallVideoError}
-          customVideoPrompt={customVideoPrompt}
-          onCustomVideoPromptChange={handleCustomVideoPromptChange}
-          onGenerateCustomVideo={handleGenerateCustomVideo}
-          isGeneratingCustomVideo={isGeneratingCustomVideo}
-          customVideoUrl={customVideoUrl}
-          customVideoError={customVideoError}
-          videoAspectRatio={videoAspectRatio}
-          onVideoAspectRatioChange={handleVideoAspectRatioChange}
-        />
       </main>
     </div>
   );
